@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <TinyGPS++.h>
 
-static const int RXPin = 4, TXPin = 3;
+static const int RXPin = 0, TXPin = 1;
 // The serial connection to the ESP8266-01
 SoftwareSerial ESP8266(2, 3); // Rx,  Tx
 
@@ -11,7 +11,7 @@ SoftwareSerial ss(RXPin, TXPin);
 
 unsigned char check_connection=0;
 unsigned char times_check=0;
-String myAPIkey = "PZ3CP1S17OAOQQGK";  
+String myAPIkey = "<API_KEY>";
 float latitude, longitude;
 static const int deviceId = 1;
 
@@ -35,7 +35,7 @@ void loop() {
   Serial.println("Connecting to Wifi");
   while(check_connection==0) {
     Serial.print(".");
-    ESP8266.print("AT+CWJAP=\"JOAO_2G\",\"joaocarlos20\"\r\n");
+    ESP8266.print("AT+CWJAP=\"<WIFI_NAME>\",\"<WIFI_PASSWORD>\"\r\n");
     ESP8266.setTimeout(5000);
 
     if(ESP8266.find("WIFI CONNECTED\r\n")==1) {
@@ -49,8 +49,20 @@ void loop() {
     }
   } 
   while(1) {
-    readSensors();
-    writeThingSpeak();
+    while(ss.available() > 0 ) {
+      gps.encode(ss.read());
+      if (gps.location.isUpdated()){
+        latitude = gps.location.lat();
+        Serial.println(latitude);
+        longitude = gps.location.lng();
+        Serial.println(longitude);
+        writeThingSpeak();
+      } else {
+        Serial.println("Position not updated.");
+      }
+      delay(1000);
+    }
+    Serial.println("Serial comunication not available, waiting 10 seconds...");
     delay(10000);
   };
 }
