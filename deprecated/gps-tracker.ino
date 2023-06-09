@@ -1,22 +1,25 @@
 #include <SoftwareSerial.h>
 #include <stdlib.h>
-#include <TinyGPS++.h>
+#include <TinyGPS.h>
 
-static const int RXPin = 0, TXPin = 1;
 // The serial connection to the ESP8266-01
 SoftwareSerial ESP8266(2, 3); // Rx,  Tx
 
 // The serial connection to the GPS module
-SoftwareSerial ss(RXPin, TXPin);
+SoftwareSerial SerialGps(10, 11); // RX, TX
+
+TinyGPS gps1;
+
+static const String myAPIkey = "<API_KEY>"; 
+static const int deviceId = 1;
+long lat, lng;
 
 unsigned char check_connection=0;
-unsigned char times_check=0;
-String myAPIkey = "<API_KEY>";
-float latitude, longitude;
-static const int deviceId = 1;
+unsigned char times_check=0; 
 
 void setup() {
   Serial.begin(115200);
+  SerialGps.begin(9600);
   ESP8266.begin(115200);  
   ESP8266.print("***VER:");
   delay(2000);
@@ -32,39 +35,50 @@ void setup() {
 
 
 void loop() {
-  Serial.println("Connecting to Wifi");
-  while(check_connection==0) {
-    Serial.print(".");
-    ESP8266.print("AT+CWJAP=\"<WIFI_NAME>\",\"<WIFI_PASSWORD>\"\r\n");
-    ESP8266.setTimeout(5000);
+    Serial.println("Connecting to Wifi");
+    while(check_connection==0) {
+        Serial.print(".");
+        ESP8266.print("AT+CWJAP=\"<WIFI-NAME>\",\"<WIFI-PASSWORD>\"\r\n");
+        ESP8266.setTimeout(5000);
 
-    if(ESP8266.find("WIFI CONNECTED\r\n")==1) {
-      Serial.println("WIFI CONNECTED");
-      break;
+        if(ESP8266.find("WIFI CONNECTED\r\n")==1) {
+            Serial.println("WIFI CONNECTED");
+            break;
+        }
+        times_check++;
+        if(times_check>3) {
+            times_check=0;
+            Serial.println("Trying to Reconnect..");
+        }
     }
-    times_check++;
-    if(times_check>3) {
-      times_check=0;
-      Serial.println("Trying to Reconnect..");
+    bool recebido = false;
+
+    while (serial1.available()) {
+        char cIn = serial1.read();
+        recebido = gps1.encode(cIn);
     }
-  } 
-  while(1) {
-    while(ss.available() > 0 ) {
-      gps.encode(ss.read());
-      if (gps.location.isUpdated()){
-        latitude = gps.location.lat();
-        Serial.println(latitude);
-        longitude = gps.location.lng();
-        Serial.println(longitude);
+
+    if(recebido) {
+        Serial.println("----------------------------------------");
+
+        long latitude, longitude;
+        gps1.get_position(&latitude, &longitude);
+
+        if (latitude != TinyGPS::GPS_INVALID_F_ANGLE) {
+            Serial.print("Latitude: ");
+            lat = latitude * 10
+            Serial.println(lat);
+        }
+
+        if (longitude != TinyGPS::GPS_INVALID_F_ANGLE) {
+            Serial.print("Longitude: ");
+            lng = longitude * 10
+            Serial.println(lng);
+        }
+
         writeThingSpeak();
-      } else {
-        Serial.println("Position not updated.");
-      }
-      delay(1000);
     }
-    Serial.println("Serial comunication not available, waiting 10 seconds...");
     delay(10000);
-  };
 }
 
 void readSensors(void) {
@@ -81,9 +95,9 @@ void writeThingSpeak(void) {
   String getStr = "GET /update?api_key=";
   getStr += myAPIkey;
   getStr +="&field1=";
-  getStr += String(latitude);
+  getStr += String(lat);
   getStr +="&field2=";
-  getStr += String(longitude);
+  getStr += String(lng);
   getStr +="&field3=";
   getStr += String(deviceId);
   getStr += "\r\n\r\n";
@@ -92,7 +106,6 @@ void writeThingSpeak(void) {
 
 void startThingSpeakCmd(void) {
   ESP8266.flush();
-  //IPAddress ip = WiFi.hostByName("ship-track.fly.io");
   String cmd = "AT+CIPSTART=\"TCP\",\"";
   cmd += "184.106.153.149"; // api.thingspeak.com IP address
   cmd += "\",80";
@@ -132,4 +145,16 @@ String GetThingspeakcmd(String postStr) {
     ESP8266.println("AT+CIPCLOSE");     
     Serial.println("AT+CIPCLOSE"); 
   } 
+}
+
+void checkWiFi() {
+    ESP8266.println("At=CWJAP?");
+    delay(1000);
+    if(ESP8266.find("OK")) {
+        Serial.println("Wifi disconected");
+        check_connection = 0;
+    } else {
+        Serial.println("Wifi connected");
+        check_connection = 1;
+    }
 }
