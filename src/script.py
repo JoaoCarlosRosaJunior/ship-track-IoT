@@ -16,7 +16,6 @@ print("Connected to Arduino port:" + arduino_port)
 
 def httpRequest(deviceid, latitude, longitude):
     payload = json.dumps({"deviceId": deviceid, "latitude": latitude, "longitude": longitude})
-    print(payload)
     if(latitude != 0 and longitude != 0):
         try:
             response = requests.request("POST",BASE_URL, headers=headers, data=payload)

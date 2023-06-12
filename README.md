@@ -22,3 +22,24 @@ This repository contains an arduino code to get the location of the device and s
 <img src="./public/circuit.jpeg" width="400"/>
 
 3. Upload the code to the arduino.
+
+## Want to test the code but don't have the IoT device? We created a script for you to test it
+
+1. First you need a orderId that can be created on our [front-end](https://ship-chain-dash.fly.dev)
+
+2. Pick up 2 points you would like to be the addr of source and destination. We need the latitude and longitude points. How to get the latitude and longitude? You can access this [link](https://support.google.com/maps/answer/18539?hl=en&co=GENIE.Platform%3DDesktop)
+
+3. Run the command:
+```
+cd test
+```
+
+Install the dependencies:
+```
+pip install -r requirements.txt
+```
+
+4. Run the script:
+```
+python3 script.py
+```
